@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="sop-slop: the quality system for a one-person workspace where several Claude Code sessions build, review and hand over work.">
+<title>sop-slop</title>
+<style>
+/* Layout: one reading column with a wide "instrument" band for the tier table and the record sample. */
+:root {
+  --bg: #f3f5f6;          /* cool paper */
+  --surface: #ffffff;
+  --ink: #16212b;         /* blue-black */
+  --muted: #586774;
+  --rule: #d4dbe0;
+  --accent: #0d6b6e;      /* inspection teal */
+  --flag: #b4530d;        /* deviation amber */
+  --flag-bg: #fbeee2;
+  /* System fonts only: no third-party requests (same rule as the NEC showcase and maerlined-site). */
+  --display: ui-rounded, "Avenir Next", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", "Noto Sans", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161c; --surface: #16202a; --ink: #e3e9ee; --muted: #9aa8b4; --rule: #2a3742;
+    --accent: #4fb8b4; --flag: #e8955a; --flag-bg: #2a1d12; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161c; --surface: #16202a; --ink: #e3e9ee; --muted: #9aa8b4; --rule: #2a3742;
+  --accent: #4fb8b4; --flag: #e8955a; --flag-bg: #2a1d12; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--body); padding-inline: 20px; padding-block: 0 64px; }
+main { max-width: 760px; margin-inline: auto; display: grid; gap: 56px; }
+header { padding-block: 64px 8px; display: grid; gap: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 36px; }
+.kicker { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font: 700 clamp(44px, 9vw, 76px)/0.95 var(--display); letter-spacing: -0.02em; margin: 0; }
+.lede { font-size: 20px; line-height: 1.5; max-width: 34ch; margin: 0; text-wrap: balance; }
+h2 { font: 700 26px/1.2 var(--display); margin: 0 0 12px; text-wrap: balance; }
+p { margin: 0; max-width: 65ch; }
+section { display: grid; gap: 14px; }
+code, .mono { font-family: var(--mono); font-size: 0.9em; }
+.parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.parts div { background: var(--surface); padding: 16px 18px; display: grid; gap: 6px; min-width: 0; }
+.parts b { font: 600 15px/1.3 var(--body); }
+.parts span { color: var(--muted); font-size: 14px; }
+.parts code { color: var(--accent); }
+.wide { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; background: var(--surface); }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+thead th { font: 600 13px/1.3 var(--body); border-bottom: 2px solid var(--ink); }
+thead th .tier { font: 500 12px/1 var(--mono); color: var(--accent); display: block; margin-bottom: 4px; }
+tbody th { font-weight: 500; color: var(--muted); width: 26%; }
+.note { font-size: 14px; color: var(--muted); }
+ol.flow { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; counter-reset: step; }
+ol.flow li { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+ol.flow li::before { content: counter(step, decimal-leading-zero); font: 500 13px/1.6 var(--mono); color: var(--flag); }
+ol.flow li:first-child { border-top: none; }
+.record { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--flag); font: 400 13px/1.55 var(--mono); padding: 18px 20px; overflow-x: auto; white-space: pre; }
+.record .k { color: var(--flag); }
+.tag { display: inline-block; font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--flag); background: var(--flag-bg); padding: 5px 8px; border-radius: 3px; }
+ul.points { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; max-width: 65ch; }
+footer { border-top: 1px solid var(--rule); padding-top: 20px; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="kicker">Process as code</span>
+    <h1>sop-slop</h1>
+    <p class="lede">The quality system for a one-person workspace where several Claude Code sessions build, review and hand over work side by side.</p>
+  </header>
+
+  <section>
+    <h2>What it is</h2>
+    <p>A small Git repository of plain Markdown that every AI session reads before it plans, builds or tests anything. Sessions don't read all of it: a routing file points each one to the one or two slices its task needs.</p>
+    <div class="parts">
+      <div><b>Working rules</b><span>Who the work is for, how plans are written, how git is used. <code>user-specs/</code></span></div>
+      <div><b>Best practices</b><span>One slice each for planning, executing and testing. <code>best-practices/</code></span></div>
+      <div><b>Procedures and machine specs</b><span>Step-by-step SOPs, and specs of how this machine should be configured. <code>sops/</code> <code>mspecs/</code></span></div>
+      <div><b>Deviation register</b><span>Every slip from any project, with its root cause and what changed because of it. <code>deviations/</code></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Process in proportion to risk</h2>
+    <p>Every project gets a tier. The highest signal decides; checking takes about a minute.</p>
+    <div class="wide">
+      <table>
+        <thead>
+          <tr><th></th><th><span class="tier">T1</span>Light</th><th><span class="tier">T2</span>Standard</th><th><span class="tier">T3</span>Full</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>Which projects</th><td>Early, tiny or inactive; private</td><td>Private and active, or shared infrastructure</td><td>Public repo or website, personal data, someone else's repo, money</td></tr>
+          <tr><th>Branch and pull request</th><td>Direct commits are fine</td><td>Required</td><td>Required</td></tr>
+          <tr><th>Review before merge</th><td>—</td><td>For rule and spec changes</td><td>Always</td></tr>
+          <tr><th>When something slips</th><td>Fix it, say so in the commit</td><td>Note on the pull request</td><td>Note plus a register entry</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">In every tier: no secrets in git, no personal data anywhere public, no rewriting shared history, and nothing pushed to someone else's repo without the owner's OK. Any slip that touches those gets the full treatment, whatever the tier.</p>
+  </section>
+
+  <section>
+    <h2>When something goes wrong</h2>
+    <p>A slip is data, not a failure to hide. The register exists so that the same mistake in two different projects shows up as one pattern.</p>
+    <ol class="flow">
+      <li><span><b>Note it at the moment.</b> A structured <code>DEVIATION:</code> note on the pull request: what the procedure says, what happened, why, and what would prevent it.</span></li>
+      <li><span><b>File it by tier and severity.</b> A minor slip in a low-risk project stops at the note; a recurring or serious one gets a full record.</span></li>
+      <li><span><b>Find the root cause.</b> A five-why analysis, written from the artefacts, not from memory.</span></li>
+      <li><span><b>Fix and prevent.</b> Corrective actions for this case; a preventive action for the next one, implemented or explicitly deferred with a reason.</span></li>
+      <li><span><b>Watch for recurrences.</b> Records are grouped into clusters by root cause, and each cluster is checked at the next documentation review.</span></li>
+    </ol>
+    <p><span class="tag">Adapted from a real record</span></p>
+    <div class="record" aria-label="Example deviation record, adapted from a real one"><span class="k">ID</span>        WDEV-0NN
+<span class="k">Severity</span>  minor — caught in review before merge
+<span class="k">Tier</span>      T3
+<span class="k">What</span>      A figure in a plan came from a local run that didn't
+          match CI, which is what actually decides.
+<span class="k">Why ×5</span>    stale dependencies → never reinstalled after the lockfile
+          changed → no step prompts it → the figure was recorded
+          from a proxy, not from the artefact that decides
+<span class="k">Fix</span>       reinstall; correct the figures; add a reminder
+<span class="k">Prevent</span>   check figures against CI before they go into a record</div>
+  </section>
+
+  <section>
+    <h2>What actually holds</h2>
+    <p>The most useful lesson so far: rules that depend on a session remembering them keep recurring, sometimes in the very session that wrote the rule down. Rules a script or a gate enforces hold. So the system keeps moving rules from prose into machinery.</p>
+    <ul class="points">
+      <li><b>Append-only editing.</b> Superseded text is kept, not deleted, and a warning-only check flags any removed line that wasn't preserved. At each review, old text moves into a History section so the body stays readable.</li>
+      <li><b>Review before merge.</b> In full-process projects, every pull request is reviewed at its current head before it merges. When the automated reviewer's quota runs out, another Claude session reviews instead, and the merge still waits for the owner's explicit OK.</li>
+      <li><b>A guard on pushes to main.</b> A small hook is being added that asks the owner before direct pushes to the main branch, even inside chained commands, with a few standing exceptions for repositories only the owner's coordinating session writes to.</li>
+      <li><b>Commands tested as written.</b> Any shell command in a document is copied out verbatim and run in two shells before it ships.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>The repository itself is private: it holds working notes and records about real projects. This page describes how it works.</span>
+    <span class="mono">sop-slop · process as code</span>
+  </footer>
+</main>
+</body>
+</html>
